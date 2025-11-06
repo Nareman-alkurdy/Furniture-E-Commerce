@@ -48,18 +48,46 @@ function displayWishlist() {
 
 // Remove from wishlist
 function removeFromWishlist(id) {
+    const item = wishlist.find(item => item.id === id);
     wishlist = wishlist.filter(item => item.id !== id);
     localStorage.setItem('wishlist', JSON.stringify(wishlist));
     displayWishlist();
+    updateCounters();
     
-    // Show notification
+    // إشعار الحذف المحسن
     const notification = document.createElement('div');
-    notification.className = 'alert alert-info position-fixed';
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    notification.innerHTML = '<i class="bi bi-info-circle me-2"></i>Item removed from wishlist';
+    notification.className = 'notification';
+    
+    notification.innerHTML = `
+        <div class="d-flex align-items-center p-3">
+            <i class="bi bi-heart-break-fill me-3 fs-4" style="color: #dc3545;"></i>
+            <div class="flex-grow-1">
+                <strong>${item ? item.title : 'Product'}</strong>
+                <div class="small mt-1">Removed from wishlist!</div>
+            </div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar bg-danger" role="progressbar" style="width: 100%"></div>
+        </div>
+    `;
     
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 2000);
+    
+    // عرض الإشعار مع تأثير الاهتزاز
+    setTimeout(() => {
+        notification.classList.add('show', 'delete');
+    }, 100);
+    
+    // شريط التقدم
+    const progressBar = notification.querySelector('.progress-bar');
+    progressBar.style.transition = 'width 3s linear';
+    setTimeout(() => progressBar.style.width = '0%', 200);
+    
+    // إزالة الإشعار
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
 }
 
 // Add to cart from wishlist
@@ -73,16 +101,60 @@ function addToCartFromWishlist(id, title, price, image) {
     }
     
     localStorage.setItem('cart', JSON.stringify(cart));
+    updateCounters();
     
-    // Show notification
+    // إشعار الإضافة المحسن
     const notification = document.createElement('div');
-    notification.className = 'alert alert-success position-fixed';
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    notification.innerHTML = `<i class="bi bi-check-circle me-2"></i>${title} added to cart!`;
+    notification.className = 'notification';
+    
+    notification.innerHTML = `
+        <div class="d-flex align-items-center p-3">
+            <i class="bi bi-cart-plus-fill me-3 fs-4" style="color: #28a745;"></i>
+            <div class="flex-grow-1">
+                <strong>${title}</strong>
+                <div class="small mt-1">تم إضافة المنتج للسلة!</div>
+            </div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
+        </div>
+    `;
     
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
+    
+    // عرض الإشعار
+    setTimeout(() => notification.classList.add('show'), 100);
+    
+    // شريط التقدم
+    const progressBar = notification.querySelector('.progress-bar');
+    progressBar.style.transition = 'width 3s linear';
+    setTimeout(() => progressBar.style.width = '0%', 200);
+    
+    // إزالة الإشعار
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
+// تحديث العدادات
+function updateCounters() {
+    const cartCount = document.getElementById('cart-count');
+    const wishlistCount = document.getElementById('wishlist-count');
+    
+    if (cartCount) {
+        cartCount.textContent = cart.length;
+        cartCount.style.display = cart.length > 0 ? 'inline' : 'none';
+    }
+    
+    if (wishlistCount) {
+        wishlistCount.textContent = wishlist.length;
+        wishlistCount.style.display = wishlist.length > 0 ? 'inline' : 'none';
+    }
 }
 
 // Initialize wishlist display
-document.addEventListener('DOMContentLoaded', displayWishlist);
+document.addEventListener('DOMContentLoaded', () => {
+    displayWishlist();
+    updateCounters();
+});

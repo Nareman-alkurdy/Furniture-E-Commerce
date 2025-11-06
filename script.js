@@ -27,8 +27,7 @@ function displayProducts(products) {
             <div class="mb-2">
               <span class="badge bg-light text-dark text-uppercase small">${product.category}</span>
             </div>
-            <h5 class="card-title fw-bold mb-2" style="height: 48px; overflow: hidden;">${product.title}</h5>
-            <p class="text-muted small mb-3" style="height: 40px; overflow: hidden;">${product.description.substring(0, 60)}...</p>
+            <h5 class="card-title fw-bold mb-3">${product.title}</h5>
             
             <div class="d-flex justify-content-between align-items-center mb-3">
               <div class="price-section">
@@ -183,8 +182,8 @@ function showCartNotification(productTitle, type = 'success') {
   } else if (type === 'wishlist') {
     icon = 'heart-fill';
     message = 'Added to wishlist!';
-  } else if (type === 'info') {
-    icon = 'info-circle-fill';
+  } else if (type === 'remove') {
+    icon = 'check-circle-fill';
     message = 'Removed from wishlist!';
   } else {
     icon = 'exclamation-circle-fill';
@@ -275,7 +274,7 @@ function toggleWishlistFromHome(id, title, price, image) {
   
   if (existingIndex > -1) {
     wishlist.splice(existingIndex, 1);
-    showCartNotification(title, 'info');
+    showCartNotification(title, 'remove');
   } else {
     wishlist.push({ id, title, price, image });
     showCartNotification(title, 'wishlist');
@@ -344,7 +343,7 @@ function toggleLanguage() {
   if (currentLang === 'en') {
     document.documentElement.setAttribute('lang', 'ar');
     document.documentElement.setAttribute('dir', 'rtl');
-    document.getElementById('langBtn').textContent = 'English';
+    document.getElementById('langBtn').textContent = 'EN';
   } else {
     document.documentElement.setAttribute('lang', 'en');
     document.documentElement.setAttribute('dir', 'ltr');
@@ -373,7 +372,7 @@ function loadPreferences() {
   }
   
   if (langBtn) {
-    langBtn.textContent = savedLang === 'ar' ? 'English' : 'عربي';
+    langBtn.textContent = savedLang === 'ar' ? 'EN' : 'AR';
   }
 }
 

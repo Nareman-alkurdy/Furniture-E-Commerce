@@ -1,376 +1,433 @@
-// Get product ID from URL
-const urlParams = new URLSearchParams(window.location.search);
-const productId = urlParams.get('id');
+// متغيرات عامة
+let currentProduct = null;
+let currentQuantity = 1;
 
-// Wishlist management
-let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
-let cart = JSON.parse(localStorage.getItem('cart')) || [];
-
-// Fetch and display product details
-async function fetchProductDetails() {
-    console.log('Product ID:', productId);
+// تحميل الصفحة
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const productId = urlParams.get('id');
     
-    if (!productId) {
-        document.getElementById('loading').innerHTML = '<div class="alert alert-danger">Product not found</div>';
-        return;
+    if (productId) {
+        loadProduct(productId);
+    } else {
+        showError('Product ID not found');
     }
+    
+    updateCartCount();
+    updateWishlistCount();
+});
 
+// جلب بيانات المنتج
+async function loadProduct(productId) {
     try {
-        console.log('Fetching product:', `https://dummyjson.com/products/${productId}`);
+        showLoading(true);
+        
         const response = await fetch(`https://dummyjson.com/products/${productId}`);
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
         const product = await response.json();
-        console.log('Product data:', product);
         
+        currentProduct = product;
         displayProduct(product);
         loadRelatedProducts(product.category);
+        
+        showLoading(false);
+        
     } catch (error) {
-        console.error('Error fetching product:', error);
-        document.getElementById('loading').innerHTML = '<div class="alert alert-danger">Error loading product: ' + error.message + '</div>';
+        console.error('Error loading product:', error);
+        showError('Failed to load product details');
+        showLoading(false);
     }
 }
 
-// Display product details
+// عرض بيانات المنتج
 function displayProduct(product) {
-    console.log('Displaying product:', product.title);
+    // تحديث العنوان والـ breadcrumb
+    document.title = `${product.title} - Furniro`;
+    document.getElementById('breadcrumb-product').textContent = product.title;
     
-    const loadingElement = document.getElementById('loading');
-    const detailsElement = document.getElementById('product-details');
-    const breadcrumbElement = document.getElementById('breadcrumb-product');
+    // الصور
+    displayProductImages(product.images);
     
-    if (loadingElement) loadingElement.style.display = 'none';
-    if (detailsElement) detailsElement.style.display = 'block';
-    if (breadcrumbElement) breadcrumbElement.textContent = product.title;
+    // المعلومات الأساسية
+    document.getElementById('product-category').textContent = product.category;
+    document.getElementById('product-title').textContent = product.title;
+    document.getElementById('product-description').textContent = product.description;
+    document.getElementById('full-description').textContent = product.description;
     
-    const discountedPrice = (product.price * (1 - product.discountPercentage / 100)).toFixed(2);
-    const isInWishlist = wishlist.some(item => item.id === product.id);
+    // التقييم
+    displayRating(product.rating);
     
-    document.getElementById('product-details').innerHTML = `
-        <div class="row">
-            <div class="col-lg-6 mb-4">
-                <div class="product-gallery">
-                    <img src="${product.thumbnail}" class="img-fluid rounded shadow main-image mb-3" alt="${product.title}">
-                    <div class="row g-2">
-                        ${(product.images && product.images.length > 0 ? product.images.slice(0, 4) : [product.thumbnail]).map(img => `
-                            <div class="col-3">
-                                <img src="${img}" class="img-fluid rounded thumbnail-img" alt="${product.title}" onclick="changeMainImage('${img}')">
-                            </div>
-                        `).join('')}
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-lg-6">
-                <div class="product-info">
-                    <nav aria-label="breadcrumb" class="mb-3">
-                        <ol class="breadcrumb">
-                            <li class="breadcrumb-item"><a href="index.html">Home</a></li>
-                            <li class="breadcrumb-item"><a href="#">${product.category}</a></li>
-                            <li class="breadcrumb-item active">${product.title}</li>
-                        </ol>
-                    </nav>
-                    
-                    <h1 class="mb-3">${product.title}</h1>
-                    
-                    <div class="rating mb-3">
-                        ${generateStars(product.rating)}
-                        <span class="ms-2 text-muted">(${product.rating}/5)</span>
-                    </div>
-                    
-                    <div class="price-section mb-4">
-                        ${product.discountPercentage > 0 ? `
-                            <span class="h3 text-warning fw-bold">$${discountedPrice}</span>
-                            <span class="text-decoration-line-through text-muted ms-2 h5">$${product.price}</span>
-                            <span class="badge bg-danger ms-2">${Math.round(product.discountPercentage)}% OFF</span>
-                        ` : `
-                            <span class="h3 text-warning fw-bold">$${product.price}</span>
-                        `}
-                    </div>
-                    
-                    <p class="product-description mb-4">${product.description}</p>
-                    
-                    <div class="product-meta mb-4">
-                        <div class="row">
-                            <div class="col-6">
-                                <strong>Category:</strong> <span class="badge bg-light text-dark">${product.category || 'N/A'}</span>
-                            </div>
-                            <div class="col-6">
-                                <strong>Brand:</strong> ${product.brand || 'N/A'}
-                            </div>
-                            <div class="col-6 mt-2">
-                                <strong>Stock:</strong> 
-                                <span class="${(product.stock || 0) > 10 ? 'text-success' : 'text-warning'}">${product.stock || 0} items</span>
-                            </div>
-                            <div class="col-6 mt-2">
-                                <strong>SKU:</strong> ${product.sku || product.id || 'N/A'}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="quantity-section mb-4">
-                        <label class="form-label fw-semibold">Quantity:</label>
-                        <div class="input-group" style="width: 150px;">
-                            <button class="btn btn-outline-secondary" type="button" onclick="changeQuantity(-1)">-</button>
-                            <input type="number" class="form-control text-center" id="quantity" value="1" min="1" max="${product.stock || 99}">
-                            <button class="btn btn-outline-secondary" type="button" onclick="changeQuantity(1)">+</button>
-                        </div>
-                    </div>
-                    
-                    <div class="action-buttons mb-4">
-                        <button class="btn btn-warning btn-lg me-3" onclick="addToCart(${product.id}, '${product.title}', ${product.discountPercentage > 0 ? discountedPrice : product.price}, '${product.thumbnail}')">
-                            <i class="bi bi-cart-plus me-2"></i>Add to Cart
-                        </button>
-                        <button class="btn ${isInWishlist ? 'btn-danger' : 'btn-outline-danger'}" onclick="toggleWishlist(${product.id}, '${product.title}', ${product.price}, '${product.thumbnail}')">
-                            <i class="bi bi-heart${isInWishlist ? '-fill' : ''} me-2"></i>${isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
-                        </button>
-                    </div>
-                    
-                    <div class="product-tabs">
-                        <ul class="nav nav-tabs" id="productTabs">
-                            <li class="nav-item">
-                                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#description">Description</button>
-                            </li>
-                            <li class="nav-item">
-                                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#reviews">Reviews</button>
-                            </li>
-                        </ul>
-                        <div class="tab-content mt-3">
-                            <div class="tab-pane fade show active" id="description">
-                                <p>${product.description}</p>
-                                <p>This premium ${product.category} item features excellent craftsmanship and modern design.</p>
-                            </div>
-                            <div class="tab-pane fade" id="reviews">
-                                <div class="review-summary mb-3">
-                                    <h6>Customer Reviews (${product.rating}/5)</h6>
-                                    ${generateStars(product.rating)}
-                                </div>
-                                <div class="review-item border-bottom pb-3 mb-3">
-                                    <div class="d-flex justify-content-between">
-                                        <strong>John D.</strong>
-                                        <div>${generateStars(5)}</div>
-                                    </div>
-                                    <p class="mt-2 mb-0">Excellent quality and fast delivery. Highly recommended!</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
+    // السعر
+    displayPrice(product);
+    
+    // تفاصيل المنتج
+    document.getElementById('product-brand').textContent = product.brand || 'No Brand';
+    document.getElementById('product-stock').textContent = product.stock > 0 ? `${product.stock} in stock` : 'Out of stock';
+    document.getElementById('product-sku').textContent = product.sku || 'N/A';
+    document.getElementById('product-weight').textContent = product.weight ? `${product.weight}g` : 'N/A';
+    
+    // تحديث حالة wishlist
+    updateWishlistButton();
+    
+    // إظهار المحتوى
+    document.getElementById('product-details').style.display = 'block';
 }
 
-// Change main image
-function changeMainImage(imageSrc) {
-    document.querySelector('.main-image').src = imageSrc;
+// عرض صور المنتج
+function displayProductImages(images) {
+    const mainImage = document.getElementById('main-image');
+    const thumbnailContainer = document.getElementById('thumbnail-container');
+    
+    if (images && images.length > 0) {
+        mainImage.src = images[0];
+        
+        thumbnailContainer.innerHTML = images.map((image, index) => `
+            <div class="col-3">
+                <img src="${image}" 
+                     class="img-fluid rounded thumbnail-img ${index === 0 ? 'border border-warning' : ''}" 
+                     style="height: 80px; object-fit: cover; cursor: pointer;"
+                     onclick="changeMainImage('${image}', this)">
+            </div>
+        `).join('');
+    }
 }
 
-// Generate star rating
-function generateStars(rating) {
+// تغيير الصورة الرئيسية
+function changeMainImage(imageSrc, thumbnail) {
+    document.getElementById('main-image').src = imageSrc;
+    
+    // إزالة الحدود من جميع الصور المصغرة
+    document.querySelectorAll('.thumbnail-img').forEach(img => {
+        img.classList.remove('border', 'border-warning');
+    });
+    
+    // إضافة الحدود للصورة المحددة
+    thumbnail.classList.add('border', 'border-warning');
+}
+
+// عرض التقييم
+function displayRating(rating) {
+    const ratingContainer = document.getElementById('product-rating');
+    const ratingText = document.getElementById('rating-text');
+    
     const fullStars = Math.floor(rating);
     const hasHalfStar = rating % 1 !== 0;
     let stars = '';
     
     for (let i = 0; i < fullStars; i++) {
-        stars += '<i class="bi bi-star-fill text-warning"></i>';
+        stars += '<i class="bi bi-star-fill"></i>';
     }
     
     if (hasHalfStar) {
-        stars += '<i class="bi bi-star-half text-warning"></i>';
+        stars += '<i class="bi bi-star-half"></i>';
     }
     
     const emptyStars = 5 - Math.ceil(rating);
     for (let i = 0; i < emptyStars; i++) {
-        stars += '<i class="bi bi-star text-warning"></i>';
+        stars += '<i class="bi bi-star"></i>';
     }
     
-    return stars;
+    ratingContainer.innerHTML = stars;
+    ratingText.textContent = `(${rating} rating)`;
 }
 
-// Change quantity
+// عرض السعر
+function displayPrice(product) {
+    const priceElement = document.getElementById('product-price');
+    const originalPriceElement = document.getElementById('original-price');
+    const discountBadge = document.getElementById('discount-badge');
+    
+    priceElement.textContent = `$${product.price}`;
+    
+    if (product.discountPercentage > 0) {
+        const originalPrice = (product.price / (1 - product.discountPercentage/100)).toFixed(2);
+        originalPriceElement.textContent = `$${originalPrice}`;
+        originalPriceElement.style.display = 'inline';
+        
+        discountBadge.textContent = `${Math.round(product.discountPercentage)}% OFF`;
+        discountBadge.style.display = 'inline';
+    }
+}
+
+// تغيير الكمية
 function changeQuantity(change) {
     const quantityInput = document.getElementById('quantity');
-    const currentValue = parseInt(quantityInput.value);
-    const newValue = currentValue + change;
+    let newQuantity = parseInt(quantityInput.value) + change;
     
-    if (newValue >= 1 && newValue <= parseInt(quantityInput.max)) {
-        quantityInput.value = newValue;
-    }
+    if (newQuantity < 1) newQuantity = 1;
+    if (newQuantity > currentProduct.stock) newQuantity = currentProduct.stock;
+    if (newQuantity > 10) newQuantity = 10;
+    
+    quantityInput.value = newQuantity;
+    currentQuantity = newQuantity;
 }
 
-// Add to cart
-function addToCart(id, title, price, image) {
-    const quantity = parseInt(document.getElementById('quantity').value);
-    const existingItem = cart.find(item => item.id === id);
+// إضافة للسلة
+function addToCart() {
+    if (!currentProduct) return;
     
-    if (existingItem) {
-        existingItem.quantity += quantity;
-    } else {
-        cart.push({ id, title, price, image, quantity });
-    }
-    
-    localStorage.setItem('cart', JSON.stringify(cart));
-    showNotification(`${title} added to cart!`, 'success');
-}
-
-// Toggle wishlist
-function toggleWishlist(id, title, price, image) {
-    const existingIndex = wishlist.findIndex(item => item.id === id);
-    
-    if (existingIndex > -1) {
-        wishlist.splice(existingIndex, 1);
-        showNotification(`${title} removed from wishlist!`, 'info');
-    } else {
-        wishlist.push({ id, title, price, image });
-        showNotification(`${title} added to wishlist!`, 'success');
-    }
-    
-    localStorage.setItem('wishlist', JSON.stringify(wishlist));
-    fetchProductDetails(); // Refresh to update button
-}
-
-// Show notification
-function showNotification(message, type) {
-    const notification = document.createElement('div');
-    notification.className = `alert alert-${type} position-fixed`;
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    notification.innerHTML = `<i class="bi bi-check-circle me-2"></i>${message}`;
-    
-    document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 3000);
-}
-
-// Search functionality
-function toggleSearch() {
-    const popup = document.getElementById('searchPopup');
-    popup.style.display = popup.style.display === 'flex' ? 'none' : 'flex';
-    if (popup.style.display === 'flex') {
-        document.getElementById('searchInput').focus();
-    }
-}
-
-async function searchProducts() {
-    const query = document.getElementById('searchInput').value.trim();
-    if (!query) return;
-    
-    try {
-        const response = await fetch(`https://dummyjson.com/products/search?q=${query}`);
-        const data = await response.json();
-        displaySearchResults(data.products);
-    } catch (error) {
-        document.getElementById('searchResults').innerHTML = '<div class="alert alert-danger">Search failed</div>';
-    }
-}
-
-function displaySearchResults(products) {
-    const resultsContainer = document.getElementById('searchResults');
-    
-    if (products.length === 0) {
-        resultsContainer.innerHTML = '<div class="alert alert-info">No products found</div>';
+    if (currentProduct.stock <= 0) {
+        showNotification('Sorry, this product is out of stock!', 'error', currentProduct.title);
         return;
     }
     
-    resultsContainer.innerHTML = `
-        <div class="search-results-list">
-            ${products.slice(0, 5).map(product => `
-                <div class="search-result-item d-flex align-items-center p-2 border-bottom">
-                    <img src="${product.thumbnail}" class="me-3" style="width: 50px; height: 50px; object-fit: cover;">
-                    <div class="flex-grow-1">
-                        <h6 class="mb-1">${product.title}</h6>
-                        <small class="text-muted">$${product.price}</small>
-                    </div>
-                    <a href="product.html?id=${product.id}" class="btn btn-sm btn-outline-warning">View</a>
-                </div>
-            `).join('')}
-        </div>
-    `;
+    let cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const existingItem = cart.find(item => item.id === currentProduct.id);
+    
+    if (existingItem) {
+        const newQuantity = existingItem.quantity + currentQuantity;
+        if (newQuantity > currentProduct.stock) {
+            showNotification('Cannot add more items. Stock limit reached!', 'warning', currentProduct.title);
+            return;
+        }
+        existingItem.quantity = newQuantity;
+    } else {
+        cart.push({
+            id: currentProduct.id,
+            title: currentProduct.title,
+            price: currentProduct.price,
+            image: currentProduct.thumbnail,
+            quantity: currentQuantity
+        });
+    }
+    
+    localStorage.setItem('cart', JSON.stringify(cart));
+    updateCartCount();
+    showNotification('Added to cart!', 'success', currentProduct.title);
 }
 
-// Load related products
+// تبديل wishlist
+function toggleWishlist() {
+    if (!currentProduct) return;
+    
+    let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+    const existingIndex = wishlist.findIndex(item => item.id === currentProduct.id);
+    
+    if (existingIndex > -1) {
+        wishlist.splice(existingIndex, 1);
+        showNotification('Removed from wishlist!', 'info', currentProduct.title);
+    } else {
+        wishlist.push({
+            id: currentProduct.id,
+            title: currentProduct.title,
+            price: currentProduct.price,
+            image: currentProduct.thumbnail
+        });
+        showNotification('Added to wishlist!', 'wishlist', currentProduct.title);
+    }
+    
+    localStorage.setItem('wishlist', JSON.stringify(wishlist));
+    updateWishlistCount();
+    updateWishlistButton();
+}
+
+// تحديث زر wishlist
+function updateWishlistButton() {
+    if (!currentProduct) return;
+    
+    const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+    const isInWishlist = wishlist.some(item => item.id === currentProduct.id);
+    
+    const wishlistBtn = document.getElementById('wishlist-btn');
+    const wishlistIcon = document.getElementById('wishlist-icon');
+    
+    if (isInWishlist) {
+        wishlistBtn.classList.remove('btn-outline-danger');
+        wishlistBtn.classList.add('btn-danger');
+        wishlistIcon.className = 'bi bi-heart-fill';
+    } else {
+        wishlistBtn.classList.remove('btn-danger');
+        wishlistBtn.classList.add('btn-outline-danger');
+        wishlistIcon.className = 'bi bi-heart';
+    }
+}
+
+// نسخ الرابط
+function copyLink() {
+    navigator.clipboard.writeText(window.location.href).then(() => {
+        showNotification('Link copied to clipboard!', 'success');
+    });
+}
+
+// جلب المنتجات ذات الصلة
 async function loadRelatedProducts(category) {
     try {
         const response = await fetch(`https://dummyjson.com/products/category/${category}?limit=4`);
         const data = await response.json();
-        displayRelatedProducts(data.products.filter(p => p.id != productId));
+        
+        const relatedProducts = data.products.filter(p => p.id !== currentProduct.id).slice(0, 4);
+        displayRelatedProducts(relatedProducts);
+        
     } catch (error) {
         console.error('Error loading related products:', error);
     }
 }
 
-// Display related products
+// عرض المنتجات ذات الصلة
 function displayRelatedProducts(products) {
     const container = document.getElementById('related-products');
-    container.innerHTML = products.slice(0, 4).map(product => `
+    
+    container.innerHTML = products.map(product => `
         <div class="col-lg-3 col-md-6">
-            <div class="card h-100 border-0 shadow-sm">
-                <img src="${product.thumbnail}" class="card-img-top" alt="${product.title}" style="height: 200px; object-fit: cover;">
-                <div class="card-body text-center">
+            <div class="card product-card h-100 border-0 shadow-sm">
+                <div class="position-relative overflow-hidden">
+                    <img src="${product.thumbnail}" class="card-img-top" alt="${product.title}" style="height: 200px; object-fit: cover;">
+                    <div class="card-overlay position-absolute top-0 start-0 w-100 h-100 d-flex align-items-center justify-content-center" style="background: rgba(0,0,0,0.7); opacity: 0; transition: all 0.3s;">
+                        <a href="product.html?id=${product.id}" class="btn btn-warning btn-sm">
+                            <i class="bi bi-eye me-1"></i>View Details
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
                     <h6 class="card-title">${product.title}</h6>
-                    <p class="text-warning fw-bold">$${product.price}</p>
-                    <a href="product.html?id=${product.id}" class="btn btn-outline-warning btn-sm">View Details</a>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="h6 text-warning mb-0">$${product.price}</span>
+                        <div class="text-warning">
+                            ${generateStars(product.rating)}
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
     `).join('');
 }
 
-// Dark Mode & Language Toggle
-function toggleDarkMode() {
-    const currentTheme = document.documentElement.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+// إنشاء النجوم
+function generateStars(rating) {
+    const fullStars = Math.floor(rating);
+    let stars = '';
     
-    document.documentElement.setAttribute('data-theme', newTheme);
-    localStorage.setItem('theme', newTheme);
+    for (let i = 0; i < fullStars; i++) {
+        stars += '<i class="bi bi-star-fill"></i>';
+    }
     
-    const darkModeBtn = document.getElementById('darkModeBtn');
-    darkModeBtn.innerHTML = newTheme === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
+    const emptyStars = 5 - fullStars;
+    for (let i = 0; i < emptyStars; i++) {
+        stars += '<i class="bi bi-star"></i>';
+    }
+    
+    return stars;
 }
 
-function toggleLanguage() {
-    const currentLang = document.documentElement.getAttribute('lang');
+// تحديث عداد السلة
+function updateCartCount() {
+    const cart = JSON.parse(localStorage.getItem('cart')) || [];
+    const totalItems = cart.reduce((sum, item) => sum + item.quantity, 0);
+    const cartCount = document.getElementById('cart-count');
+    if (cartCount) {
+        cartCount.textContent = totalItems;
+        cartCount.style.display = totalItems > 0 ? 'inline' : 'none';
+    }
+}
+
+// تحديث عداد wishlist
+function updateWishlistCount() {
+    const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+    const wishlistCount = document.getElementById('wishlist-count');
+    if (wishlistCount) {
+        wishlistCount.textContent = wishlist.length;
+        wishlistCount.style.display = wishlist.length > 0 ? 'inline' : 'none';
+    }
+}
+
+// إظهار/إخفاء التحميل
+function showLoading(show) {
+    const loading = document.getElementById('loading');
+    const productDetails = document.getElementById('product-details');
     
-    if (currentLang === 'en') {
-        document.documentElement.setAttribute('lang', 'ar');
-        document.documentElement.setAttribute('dir', 'rtl');
-        document.getElementById('langBtn').textContent = 'English';
+    if (show) {
+        loading.style.display = 'block';
+        productDetails.style.display = 'none';
     } else {
-        document.documentElement.setAttribute('lang', 'en');
-        document.documentElement.setAttribute('dir', 'ltr');
-        document.getElementById('langBtn').textContent = 'عربي';
-    }
-    
-    localStorage.setItem('language', document.documentElement.getAttribute('lang'));
-    localStorage.setItem('direction', document.documentElement.getAttribute('dir'));
-}
-
-// Load saved preferences
-function loadPreferences() {
-    const savedTheme = localStorage.getItem('theme') || 'light';
-    const savedLang = localStorage.getItem('language') || 'en';
-    const savedDir = localStorage.getItem('direction') || 'ltr';
-    
-    document.documentElement.setAttribute('data-theme', savedTheme);
-    document.documentElement.setAttribute('lang', savedLang);
-    document.documentElement.setAttribute('dir', savedDir);
-    
-    const darkModeBtn = document.getElementById('darkModeBtn');
-    const langBtn = document.getElementById('langBtn');
-    
-    if (darkModeBtn) {
-        darkModeBtn.innerHTML = savedTheme === 'dark' ? '<i class="bi bi-sun"></i>' : '<i class="bi bi-moon"></i>';
-    }
-    
-    if (langBtn) {
-        langBtn.textContent = savedLang === 'ar' ? 'English' : 'عربي';
+        loading.style.display = 'none';
     }
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', () => {
-    loadPreferences();
-    fetchProductDetails();
+// إظهار خطأ
+function showError(message) {
+    const container = document.querySelector('.container.py-5');
+    container.innerHTML = `
+        <div class="text-center py-5">
+            <i class="bi bi-exclamation-triangle display-1 text-warning mb-3"></i>
+            <h4 class="text-muted">${message}</h4>
+            <a href="shop.html" class="btn btn-warning mt-3">Back to Shop</a>
+        </div>
+    `;
+}
+
+// إظهار الإشعار
+function showNotification(message, type = 'success', productTitle = '') {
+    const notification = document.createElement('div');
+    notification.className = 'notification';
+    
+    let icon, displayMessage;
+    if (type === 'success') {
+        icon = 'check-circle-fill';
+        displayMessage = message || 'Added to cart!';
+    } else if (type === 'wishlist') {
+        icon = 'heart-fill';
+        displayMessage = message || 'Added to wishlist!';
+    } else if (type === 'info') {
+        icon = 'info-circle-fill';
+        displayMessage = message || 'Removed from wishlist!';
+    } else if (type === 'warning') {
+        icon = 'exclamation-triangle-fill';
+        displayMessage = message;
+    } else if (type === 'error') {
+        icon = 'x-circle-fill';
+        displayMessage = message;
+    } else {
+        icon = 'check-circle-fill';
+        displayMessage = message;
+    }
+    
+    notification.innerHTML = `
+        <div class="d-flex align-items-center p-3">
+            <i class="bi bi-${icon} me-3 fs-4"></i>
+            <div class="flex-grow-1">
+                ${productTitle ? `<strong>${productTitle}</strong>` : ''}
+                <div class="small mt-1">${displayMessage}</div>
+            </div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar" role="progressbar" style="width: 100%"></div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // عرض الإشعار
+    setTimeout(() => notification.classList.add('show'), 100);
+    
+    // شريط التقدم
+    const progressBar = notification.querySelector('.progress-bar');
+    progressBar.style.transition = 'width 3s linear';
+    setTimeout(() => progressBar.style.width = '0%', 200);
+    
+    // إزالة الإشعار
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
+// تبديل الوضع المظلم
+function toggleDarkMode() {
+    const body = document.body;
+    const isDark = body.getAttribute('data-theme') === 'dark';
+    
+    if (isDark) {
+        body.removeAttribute('data-theme');
+        localStorage.setItem('theme', 'light');
+    } else {
+        body.setAttribute('data-theme', 'dark');
+        localStorage.setItem('theme', 'dark');
+    }
+}
+
+// تحميل الثيم المحفوظ
+document.addEventListener('DOMContentLoaded', function() {
+    const savedTheme = localStorage.getItem('theme');
+    if (savedTheme === 'dark') {
+        document.body.setAttribute('data-theme', 'dark');
+    }
 });

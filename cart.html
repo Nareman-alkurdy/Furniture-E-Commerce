@@ -1,9 +1,14 @@
 <!DOCTYPE html>
-<html lang="ar" dir="rtl">
+<html lang="en" dir="ltr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>السلة - Furniro</title>
+    <script>
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
@@ -23,12 +28,22 @@
                     <li class="nav-item"><a class="nav-link" href="about.html">About</a></li>
                     <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
                 </ul>
-                <div class="d-flex gap-3">
-                    <i class="bi bi-person"></i>
-                    <i class="bi bi-search"></i>
-                    <i class="bi bi-heart"></i>
+                <div class="d-flex gap-3 align-items-center">
+                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="toggleLanguage()" id="langBtn">
+                        AR
+                    </button>
+                    <button class="btn btn-sm btn-outline-secondary me-3" onclick="toggleDarkMode()" id="darkModeBtn">
+                        <i class="bi bi-moon"></i>
+                    </button>
+                    <i class="bi bi-person me-3"></i>
+                    <i class="bi bi-search me-3"></i>
+                    <a href="wishlist.html" class="position-relative me-3">
+                        <i class="bi bi-heart"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="wishlist-count" style="display: none;">0</span>
+                    </a>
                     <a href="cart.html" class="position-relative">
                         <i class="bi bi-cart"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-count" style="display: none;">0</span>
                     </a>
                 </div>
             </div>

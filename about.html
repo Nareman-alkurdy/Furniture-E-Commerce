@@ -4,6 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>About Us - Furniro</title>
+    <script>
+        if (localStorage.getItem('theme') === 'dark') {
+            document.documentElement.setAttribute('data-theme', 'dark');
+        }
+    </script>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/font/bootstrap-icons.css" rel="stylesheet">
     <link href="style.css" rel="stylesheet">
@@ -24,7 +29,11 @@
                     <li class="nav-item"><a class="nav-link" href="contact.html">Contact</a></li>
                 </ul>
                 <div class="d-flex gap-3 align-items-center">
-                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="toggleLanguage()" id="langBtn">عربي</button>
+                    <button class="btn btn-sm btn-outline-secondary me-2" onclick="toggleLanguage()" id="langBtn">
+                        AR
+                    </button>
+
+
                     <button class="btn btn-sm btn-outline-secondary me-3" onclick="toggleDarkMode()" id="darkModeBtn">
                         <i class="bi bi-moon"></i>
                     </button>
@@ -35,6 +44,7 @@
                     </a>
                     <a href="cart.html" class="position-relative">
                         <i class="bi bi-cart"></i>
+                        <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" id="cart-count" style="display: none;">0</span>
                     </a>
                 </div>
             </div>
@@ -128,28 +138,28 @@
             <div class="row g-4">
                 <div class="col-lg-3 col-md-6">
                     <div class="text-center">
-                        <div class="bg-light rounded-circle mx-auto mb-3" style="width: 150px; height: 150px; background-image: url('https://via.placeholder.com/150'); background-size: cover;"></div>
+                        <div class="bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px; background-image: url('https://images.unsplash.com/photo-1494790108755-2616b612b786?w=150&h=150&fit=crop&crop=face'); background-size: cover; background-position: center;"></div>
                         <h6 class="fw-bold">Sarah Johnson</h6>
                         <p class="text-muted small">CEO & Founder</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <div class="text-center">
-                        <div class="bg-light rounded-circle mx-auto mb-3" style="width: 150px; height: 150px; background-image: url('https://via.placeholder.com/150'); background-size: cover;"></div>
+                        <div class="bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px; background-image: url('https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face'); background-size: cover; background-position: center;"></div>
                         <h6 class="fw-bold">Mike Chen</h6>
                         <p class="text-muted small">Head of Design</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <div class="text-center">
-                        <div class="bg-light rounded-circle mx-auto mb-3" style="width: 150px; height: 150px; background-image: url('https://via.placeholder.com/150'); background-size: cover;"></div>
+                        <div class="bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px; background-image: url('https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=150&h=150&fit=crop&crop=face'); background-size: cover; background-position: center;"></div>
                         <h6 class="fw-bold">Emma Davis</h6>
                         <p class="text-muted small">Customer Success</p>
                     </div>
                 </div>
                 <div class="col-lg-3 col-md-6">
                     <div class="text-center">
-                        <div class="bg-light rounded-circle mx-auto mb-3" style="width: 150px; height: 150px; background-image: url('https://via.placeholder.com/150'); background-size: cover;"></div>
+                        <div class="bg-light rounded-circle mx-auto mb-3 d-flex align-items-center justify-content-center" style="width: 150px; height: 150px; background-image: url('https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face'); background-size: cover; background-position: center;"></div>
                         <h6 class="fw-bold">Alex Rodriguez</h6>
                         <p class="text-muted small">Operations Manager</p>
                     </div>

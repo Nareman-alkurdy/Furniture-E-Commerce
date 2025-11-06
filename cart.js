@@ -99,25 +99,118 @@ function updateQuantity(id, newQuantity) {
     if (item) {
         item.quantity = newQuantity;
         localStorage.setItem('cart', JSON.stringify(cart));
-        displayCart();
+        updateItemDisplay(id);
+        updateOrderSummary();
     }
+}
+
+// تحديث عرض منتج واحد
+function updateItemDisplay(id) {
+    const item = cart.find(item => item.id === id);
+    if (!item) return;
+    
+    const itemElement = document.getElementById(`item-${id}`);
+    if (itemElement) {
+        const quantityInput = itemElement.querySelector('input[type="text"]');
+        const totalElement = itemElement.querySelector('.col-md-2 strong');
+        const minusBtn = itemElement.querySelector('button[onclick*="-"]');
+        const plusBtn = itemElement.querySelector('button[onclick*="+"]');
+        
+        quantityInput.value = item.quantity;
+        totalElement.textContent = `$${(item.price * item.quantity).toFixed(2)}`;
+        
+        minusBtn.setAttribute('onclick', `updateQuantity(${id}, ${item.quantity - 1})`);
+        plusBtn.setAttribute('onclick', `updateQuantity(${id}, ${item.quantity + 1})`);
+    }
+}
+
+// تحديث ملخص الطلب
+function updateOrderSummary() {
+    const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const subtotalElement = document.querySelector('.card-body .d-flex:nth-child(1) span:last-child');
+    const totalElement = document.querySelector('.card-body .d-flex:nth-child(3) strong:last-child');
+    
+    if (subtotalElement) subtotalElement.textContent = `$${total.toFixed(2)}`;
+    if (totalElement) totalElement.textContent = `$${(total + 10).toFixed(2)}`;
 }
 
 // حذف منتج من السلة
 function removeFromCart(id) {
+    const item = cart.find(item => item.id === id);
     cart = cart.filter(item => item.id !== id);
     localStorage.setItem('cart', JSON.stringify(cart));
-    displayCart();
     
-    // إشعار الحذف
+    // إزالة العنصر من العرض بدلاً من إعادة تحميل الصفحة
+    const itemElement = document.getElementById(`item-${id}`);
+    if (itemElement) {
+        itemElement.remove();
+    }
+    
+    // تحديث ملخص الطلب
+    updateOrderSummary();
+    updateCounters();
+    
+    // فحص إذا كانت السلة فارغة
+    if (cart.length === 0) {
+        document.getElementById('cart-content').style.display = 'none';
+        document.getElementById('empty-cart').style.display = 'block';
+    }
+    
+    // إشعار الحذف المحسن
     const notification = document.createElement('div');
-    notification.className = 'alert alert-info position-fixed';
-    notification.style.cssText = 'top: 20px; right: 20px; z-index: 9999; min-width: 300px;';
-    notification.innerHTML = '<i class="bi bi-info-circle me-2"></i>Item removed from cart';
+    notification.className = 'notification';
+    
+    notification.innerHTML = `
+        <div class="d-flex align-items-center p-3">
+            <i class="bi bi-trash-fill me-3 fs-4" style="color: #dc3545;"></i>
+            <div class="flex-grow-1">
+                <strong>${item ? item.title : 'Product'}</strong>
+                <div class="small mt-1">Removed from cart!</div>
+            </div>
+        </div>
+        <div class="progress">
+            <div class="progress-bar bg-danger" role="progressbar" style="width: 100%"></div>
+        </div>
+    `;
     
     document.body.appendChild(notification);
-    setTimeout(() => notification.remove(), 2000);
+    
+    // عرض الإشعار مع تأثير الاهتزاز
+    setTimeout(() => {
+        notification.classList.add('show', 'delete');
+    }, 100);
+    
+    // شريط التقدم
+    const progressBar = notification.querySelector('.progress-bar');
+    progressBar.style.transition = 'width 3s linear';
+    setTimeout(() => progressBar.style.width = '0%', 200);
+    
+    // إزالة الإشعار
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 500);
+    }, 3000);
+}
+
+// تحديث العدادات
+function updateCounters() {
+    const cartCount = document.getElementById('cart-count');
+    const wishlistCount = document.getElementById('wishlist-count');
+    
+    if (cartCount) {
+        cartCount.textContent = cart.length;
+        cartCount.style.display = cart.length > 0 ? 'inline' : 'none';
+    }
+    
+    if (wishlistCount) {
+        const wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+        wishlistCount.textContent = wishlist.length;
+        wishlistCount.style.display = wishlist.length > 0 ? 'inline' : 'none';
+    }
 }
 
 // تحميل السلة عند فتح الصفحة
-document.addEventListener('DOMContentLoaded', displayCart);
+document.addEventListener('DOMContentLoaded', () => {
+    displayCart();
+    updateCounters();
+});
